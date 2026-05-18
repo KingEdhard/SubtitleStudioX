@@ -84,56 +84,48 @@ def _ejecutar_ffmpeg_progreso(comando, duracion):
     pbar.close()
     return ret == 0, stderr_total
 
-def _construir_comando_mux(archivo_video, srt_ingles, srt_espanol, formato_salida, omitir_subs=False):
+def _construir_comando_mux(archivo_video, srt_ingles, srt_espanol, formato_salida):
+    """
+    Construye el comando ffmpeg para muxear.
+    Los subtítulos se mapean primero el español (como predeterminado) y luego el inglés.
+    No se copian subtítulos originales para evitar conflictos de metadatos.
+    """
     cmd = [FFMPEG_PATH, '-y']
     cmd.extend(['-i', archivo_video.replace('\\', '/')])
+    # Insertamos primero el SRT español para que sea el stream 0 de subtítulos (default)
+    cmd.extend(['-i', srt_espanol.replace('\\', '/')])
     cmd.extend(['-i', srt_ingles.replace('\\', '/')])
-    tiene_espanol = srt_espanol is not None
-    if tiene_espanol:
-        cmd.extend(['-i', srt_espanol.replace('\\', '/')])
 
-    # Mapear pistas originales
-    cmd.extend(['-map', '0:v', '-map', '0:a?'])
-    if not omitir_subs:
-        cmd.extend(['-map', '0:s?'])
-    cmd.extend(['-map', '0:t?', '-map', '0:d?'])
+    # Mapear todas las pistas originales excepto subtítulos
+    cmd.extend(['-map', '0:v', '-map', '0:a?', '-map', '0:t?', '-map', '0:d?'])
+    # No mapeamos 0:s (omitimos subtítulos originales)
 
-    # Copiar codecs
+    # Copiar codecs originales
     cmd.extend(['-c:v', 'copy', '-c:a', 'copy', '-c:t', 'copy', '-c:d', 'copy'])
-    if not omitir_subs:
-        cmd.extend(['-c:s', 'copy'])
 
-    # Subtítulos externos
-    cmd.extend(['-map', '1'])
+    # Mapear subtítulos externos (español = stream 0, inglés = stream 1)
+    cmd.extend(['-map', '1', '-map', '2'])
     if formato_salida == 'mp4':
-        cmd.extend(['-c:s:0', 'mov_text'])
+        cmd.extend(['-c:s:0', 'mov_text', '-c:s:1', 'mov_text'])
     else:
-        cmd.extend(['-c:s:0', 'srt'])
-    cmd.extend(['-metadata:s:s:0', 'language=eng', '-metadata:s:s:0', 'title=English'])
-    cmd.extend(['-disposition:s:s:0', 'default'])
+        cmd.extend(['-c:s:0', 'srt', '-c:s:1', 'srt'])
 
-    if tiene_espanol:
-        cmd.extend(['-map', '2'])
-        if formato_salida == 'mp4':
-            cmd.extend(['-c:s:1', 'mov_text'])
-        else:
-            cmd.extend(['-c:s:1', 'srt'])
-        cmd.extend(['-metadata:s:s:1', 'language=spa', '-metadata:s:s:1', 'title=Español Latino'])
-        cmd.extend(['-disposition:s:s:1', '0'])
+    # Metadatos y disposiciones: español predeterminado, inglés secundario
+    cmd.extend([
+        '-metadata:s:s:0', 'language=spa', '-metadata:s:s:0', 'title=Español Latino',
+        '-metadata:s:s:1', 'language=eng', '-metadata:s:s:1', 'title=English',
+        '-disposition:s:s:0', 'default',
+        '-disposition:s:s:1', '0'
+    ])
 
     cmd.extend(['-map_metadata', '0', '-map_chapters', '0'])
     return cmd
 
 def incrustar_subtitulos(archivo_video, srt_ingles, srt_espanol, formato_salida=None):
-    """
-    Si formato_salida se especifica ('mkv' o 'mp4'), lo usa directamente.
-    Si es None, pregunta por consola (útil para main.py).
-    """
     if not os.path.exists(archivo_video):
         print("✖ No se encontró el video original.")
         return None
 
-    # Elegir formato
     if formato_salida is None:
         formato = input_validado(
             "¿Formato de salida? (1=MKV, 2=MP4) [MKV]: ",
@@ -149,36 +141,18 @@ def incrustar_subtitulos(archivo_video, srt_ingles, srt_espanol, formato_salida=
     ruta_salida = f"{base}_subtitulado.{extension}"
     duracion = _obtener_duracion(archivo_video)
 
-    # Primer intento
-    omitir_subs = False
-    cmd = _construir_comando_mux(archivo_video, srt_ingles, srt_espanol, extension, omitir_subs)
+    # Siempre omitimos subtítulos originales para que los nuevos queden limpios
+    cmd = _construir_comando_mux(archivo_video, srt_ingles, srt_espanol, extension)
     exito, stderr = _ejecutar_ffmpeg_progreso(cmd, duracion)
 
     if not exito:
         if DEBUG:
-            print("[DEBUG] stderr de primer intento:")
+            print("[DEBUG] stderr del intento principal:")
             print(stderr[-2000:])
-        # Fallback automático (solo si hay subtítulos originales que puedan causar conflicto)
-        if any(tag in (stderr or "").lower() for tag in ('mov_text', 'subtitle', 'could not write header', 'error writing trailer')):
-            print("\n⚠ Error de empaquetado. Reintentando sin subtítulos originales...")
-            omitir_subs = True
-            if extension == 'mp4':
-                extension = 'mkv'
-                ruta_salida = f"{base}_subtitulado.{extension}"
-            cmd2 = _construir_comando_mux(archivo_video, srt_ingles, srt_espanol, extension, omitir_subs)
-            cmd2.append(ruta_salida)
-            exito2, stderr2 = _ejecutar_ffmpeg_progreso(cmd2, duracion)
-            if not exito2:
-                print("✖ El reintento también falló. Los subtítulos no se incrustaron.")
-                if DEBUG:
-                    print("[DEBUG] stderr del reintento:")
-                    print(stderr2[-2000:])
-                return None
-            else:
-                print("✔ Multiplexación completada en el reintento.")
-        else:
-            print("✖ Error en la multiplexación. Se conserva el original.")
-            return None
+        # Fallback: si falla por algún motivo, reintentamos sin subtítulos originales (ya lo estamos haciendo)
+        # Si sigue fallando, mostramos error
+        print("✖ Error en la multiplexación. Se conserva el original.")
+        return None
 
     print(f"\n✔ Nuevo archivo creado: {ruta_salida}")
     # Preguntar si eliminar original (solo si se ejecuta por consola)
