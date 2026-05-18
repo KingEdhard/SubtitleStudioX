@@ -1,0 +1,24 @@
+# Binarios
+bin/
+
+# Entorno virtual
+venv/
+
+# Caché Python
+__pycache__/
+*.pyc
+
+# Archivos temporales de audio
+*.wav
+
+# Subtítulos generados (si no quieres subirlos)
+*.srt
+
+# Modelos descargados (opcional, pero son grandes)
+models/
+*.pt
+*.bin
+
+# Archivos de sistema
+Thumbs.db
+Desktop.ini
