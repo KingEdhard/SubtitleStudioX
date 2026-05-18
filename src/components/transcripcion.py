@@ -2,10 +2,10 @@ import os
 from tqdm import tqdm
 from faster_whisper import WhisperModel
 
-def transcribir_audio(wav_path, modelo="medium", device="cpu", compute_type="float32"):
+def transcribir_audio(wav_path, modelo="medium", device="cpu", compute_type="float32", progress_callback=None):
     """
     Transcribe el WAV a inglés con faster-whisper.
-    Optimizado para CPUs Intel básicas sin aceleración int8 (AVX-512 VNNI).
+    Si se proporciona progress_callback, se llamará con (current, total) tras cada segmento.
     """
     if not os.path.exists(wav_path):
         print(f"✖ Archivo de audio no encontrado: {wav_path}")
@@ -40,9 +40,13 @@ def transcribir_audio(wav_path, modelo="medium", device="cpu", compute_type="flo
                 f.write(f"{total_segmentos+1}\n{to_hmsm(start)} --> {to_hmsm(end)}\n{text}\n\n")
                 total_segmentos += 1
                 pbar.update(1)
+                if progress_callback:
+                    progress_callback(total_segmentos, None)  # total desconocido aún
 
         pbar.total = total_segmentos
         pbar.refresh()
+        if progress_callback:
+            progress_callback(total_segmentos, total_segmentos)
 
     print(f"✔ Subtítulos en inglés generados: {srt_path} ({total_segmentos} segmentos)")
     return srt_path

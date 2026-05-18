@@ -3,9 +3,10 @@ import os
 from tqdm import tqdm
 from transformers import MarianMTModel, MarianTokenizer
 
-def traducir_srt(srt_ingles):
+def traducir_srt(srt_ingles, progress_callback=None):
     """
-    Traduce el archivo .srt de inglés a español latino y devuelve la ruta del .srt en español.
+    Traduce el archivo .srt de inglés a español latino.
+    Si se proporciona progress_callback, se llamará con (current, total) en cada segmento.
     """
     if not srt_ingles or not os.path.exists(srt_ingles):
         print(f"✖ Archivo .srt no encontrado: {srt_ingles}")
@@ -16,11 +17,9 @@ def traducir_srt(srt_ingles):
     tokenizer = MarianTokenizer.from_pretrained(modelo)
     model = MarianMTModel.from_pretrained(modelo)
 
-    # Leer el archivo .srt
     with open(srt_ingles, "r", encoding="utf-8") as f:
         contenido = f.read()
 
-    # Expresión regular para encontrar cada bloque SRT
     bloques = re.split(r'\n\n+', contenido.strip())
     if not bloques:
         print("✖ No se encontraron bloques en el .srt.")
@@ -28,12 +27,11 @@ def traducir_srt(srt_ingles):
 
     print(f"   Traduciendo {len(bloques)} segmentos...")
 
-    # Construir la ruta de salida
-    base = os.path.splitext(srt_ingles)[0]  # quita _en
+    base = os.path.splitext(srt_ingles)[0]
     srt_espanol = base.replace('_en', '_es') + ".srt"
 
     with open(srt_espanol, "w", encoding="utf-8") as out:
-        for bloque in tqdm(bloques, desc="Traduciendo segmentos"):
+        for i, bloque in enumerate(tqdm(bloques, desc="Traduciendo segmentos"), 1):
             lineas = bloque.strip().split('\n')
             if len(lineas) < 3:
                 continue
@@ -42,7 +40,6 @@ def traducir_srt(srt_ingles):
             tiempos = lineas[1]
             texto = '\n'.join(lineas[2:])
 
-            # Traducir el texto
             try:
                 translated = model.generate(
                     **tokenizer(texto, return_tensors="pt", padding=True)
@@ -50,9 +47,11 @@ def traducir_srt(srt_ingles):
                 texto_es = tokenizer.decode(translated[0], skip_special_tokens=True)
             except Exception as e:
                 print(f"\n⚠ Error traduciendo bloque {indice}: {e}")
-                texto_es = texto  # fallback: dejar en inglés
+                texto_es = texto
 
             out.write(f"{indice}\n{tiempos}\n{texto_es}\n\n")
+            if progress_callback:
+                progress_callback(i, len(bloques))
 
     print(f"✔ Subtítulos en español generados: {srt_espanol}")
     return srt_espanol

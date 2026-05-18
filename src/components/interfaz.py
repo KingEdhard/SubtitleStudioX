@@ -3,7 +3,7 @@ import sys
 import time
 import threading
 import tkinter as tk
-from tkinter import messagebox, filedialog, scrolledtext, simpledialog
+from tkinter import messagebox, filedialog, scrolledtext
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT_DIR)
@@ -23,7 +23,7 @@ class VocesClarasApp:
         self.procesando = False
         self._start_global = None
         self._start_tarea = None
-        self.formato_salida = 'mkv'  # valor por defecto
+        self.formato_salida = 'mkv'
         self._crear_widgets()
 
     def _crear_widgets(self):
@@ -34,7 +34,6 @@ class VocesClarasApp:
         self.lbl_count = tk.Label(frame_top, text="0 archivos seleccionados")
         self.lbl_count.pack(side=tk.LEFT, padx=20)
 
-        # Selector de formato de salida
         formato_frame = tk.Frame(self.root, padx=10, pady=5)
         formato_frame.pack(fill=tk.X)
         tk.Label(formato_frame, text="Formato de salida:").pack(side=tk.LEFT)
@@ -80,6 +79,7 @@ class VocesClarasApp:
         self.log.pack(fill=tk.BOTH, expand=True)
 
     def log_message(self, msg):
+        print(msg)
         self.log.configure(state=tk.NORMAL)
         self.log.insert(tk.END, msg + "\n")
         self.log.see(tk.END)
@@ -127,6 +127,8 @@ class VocesClarasApp:
             elapsed = time.time() - self._start_tarea
             restante = (elapsed / porcentaje) * (100 - porcentaje)
             self.lbl_eta_tarea.config(text=f"Tiempo restante: {self._formato_tiempo(restante)}")
+        else:
+            self.lbl_eta_tarea.config(text="")
         self.root.update_idletasks()
 
     def iniciar_procesamiento(self):
@@ -139,13 +141,26 @@ class VocesClarasApp:
         self.btn_iniciar.config(state=tk.DISABLED)
         self.btn_detener.config(state=tk.NORMAL)
         self._start_global = time.time()
-        self.formato_salida = self.formato_var.get()  # leer formato antes de empezar
+        self.formato_salida = self.formato_var.get()
+        self.log_message(f"Formato de salida seleccionado: {self.formato_salida.upper()}")
         t = threading.Thread(target=self.procesar_videos, daemon=True)
         t.start()
 
     def detener_procesamiento(self):
         self.procesando = False
         self.log_message("Detenido por el usuario.")
+
+    def transcripcion_progress(self, current, total):
+        if total:
+            porcentaje = (current / total) * 100
+            self.actualizar_barra_tarea(porcentaje, f"Transcribiendo... ({current}/{total})")
+        else:
+            fake = min(current * 0.5, 95)
+            self.actualizar_barra_tarea(fake, f"Transcribiendo... ({current} segmentos)")
+
+    def traduccion_progress(self, current, total):
+        porcentaje = (current / total) * 100
+        self.actualizar_barra_tarea(porcentaje, f"Traduciendo... ({current}/{total})")
 
     def procesar_videos(self):
         total = len(self.archivos)
@@ -166,12 +181,12 @@ class VocesClarasApp:
             except Exception as e:
                 self.log_message(f"❌ Error en extracción: {e}")
                 continue
-            self.actualizar_barra_tarea(25, "Audio extraído")
+            self.actualizar_barra_tarea(100, "Audio extraído")
 
             self._start_tarea = time.time()
             self.actualizar_barra_tarea(0, "Transcribiendo...")
             try:
-                srt_ing = transcribir_audio(wav)
+                srt_ing = transcribir_audio(wav, progress_callback=self.transcripcion_progress)
                 if not srt_ing:
                     self.log_message("⚠ Fallo en transcripción.")
                     if os.path.exists(wav): os.remove(wav)
@@ -180,18 +195,18 @@ class VocesClarasApp:
                 self.log_message(f"❌ Error en transcripción: {e}")
                 if os.path.exists(wav): os.remove(wav)
                 continue
-            self.actualizar_barra_tarea(50, "Transcripción completada")
+            self.actualizar_barra_tarea(100, "Transcripción completada")
 
             self._start_tarea = time.time()
             self.actualizar_barra_tarea(0, "Traduciendo...")
             try:
-                srt_esp = traducir_srt(srt_ing)
+                srt_esp = traducir_srt(srt_ing, progress_callback=self.traduccion_progress)
                 if not srt_esp:
                     self.log_message("⚠ Fallo en traducción. Se incrustará solo inglés.")
             except Exception as e:
                 self.log_message(f"❌ Error en traducción: {e}")
                 srt_esp = None
-            self.actualizar_barra_tarea(75, "Traducción completada" if srt_esp else "Sin traducción")
+            self.actualizar_barra_tarea(100, "Traducción completada")
 
             self._start_tarea = time.time()
             self.actualizar_barra_tarea(0, "Multiplexando...")
@@ -199,7 +214,6 @@ class VocesClarasApp:
                 ruta_final = incrustar_subtitulos(video, srt_ing, srt_esp, formato_salida=self.formato_salida)
                 if ruta_final:
                     self.log_message(f"✔ Completado: {ruta_final}")
-                    # Preguntar si eliminar original (ventana emergente)
                     if messagebox.askyesno("Eliminar original", "¿Deseas eliminar el video original?"):
                         try:
                             os.remove(video)
