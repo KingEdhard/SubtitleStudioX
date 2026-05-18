@@ -97,5 +97,5 @@ También puedes usar el modo texto con `python main.py`.
 
 ---
 
-Repositorio creado por **KingEdhard**  
+Repositorio creado por **[KingEdhard](https://github.com/KingEdhard)**  
 *"Voces claras, subtítulos perfectos"*
