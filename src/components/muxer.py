@@ -114,24 +114,41 @@ def _ejecutar_ffmpeg_progreso(comando, duracion, progress_callback=None):
     return ret == 0, stderr_total
 
 def _construir_comando_mux(archivo_video, srt_ingles, srt_espanol, formato_salida, ruta_salida):
+    """
+    Construye el comando ffmpeg para muxear sin generar conflictos de streams.
+    Se mapean explícitamente los streams de subtítulos y se asigna codec individual.
+    """
     cmd = [FFMPEG_PATH, '-y']
+    # Entradas
     cmd.extend(['-i', archivo_video.replace('\\', '/')])
     cmd.extend(['-i', srt_espanol.replace('\\', '/')])
     cmd.extend(['-i', srt_ingles.replace('\\', '/')])
-    cmd.extend(['-map', '0:v', '-map', '0:a?', '-map', '0:t?', '-map', '0:d?'])
-    cmd.extend(['-c:v', 'copy', '-c:a', 'copy', '-c:t', 'copy', '-c:d', 'copy'])
-    cmd.extend(['-map', '1', '-map', '2'])
+
+    # Mapear video y audio del original
+    cmd.extend(['-map', '0:v', '-map', '0:a?'])
+    cmd.extend(['-c:v', 'copy', '-c:a', 'copy'])
+
+    # Mapear subtítulos externos (español primero, inglés segundo)
+    cmd.extend(['-map', '1:s:0', '-map', '2:s:0'])
+
+    # Codec de subtítulos individual para cada stream
     if formato_salida == 'mp4':
         cmd.extend(['-c:s:0', 'mov_text', '-c:s:1', 'mov_text'])
     else:
         cmd.extend(['-c:s:0', 'srt', '-c:s:1', 'srt'])
+
+    # Metadatos y disposiciones (aplicados en orden a los streams de subtítulos)
     cmd.extend([
         '-metadata:s:s:0', 'language=spa', '-metadata:s:s:0', 'title=Español Latino',
         '-metadata:s:s:1', 'language=eng', '-metadata:s:s:1', 'title=English',
         '-disposition:s:s:0', 'default',
         '-disposition:s:s:1', '0'
     ])
+
+    # Copiar metadatos globales y capítulos del original
     cmd.extend(['-map_metadata', '0', '-map_chapters', '0'])
+
+    # Archivo de salida
     cmd.append(ruta_salida.replace('\\', '/'))
     return cmd
 
@@ -151,7 +168,6 @@ def incrustar_subtitulos(archivo_video, srt_ingles, srt_espanol, formato_salida=
     else:
         extension = formato_salida
 
-    # Crear carpeta de salida igual que en extracción
     dir_video = os.path.dirname(archivo_video)
     nombre_base = os.path.splitext(os.path.basename(archivo_video))[0]
     carpeta_salida = os.path.join(dir_video, nombre_base + "_subtitulos_generados")
@@ -161,6 +177,10 @@ def incrustar_subtitulos(archivo_video, srt_ingles, srt_espanol, formato_salida=
     duracion = _obtener_duracion(archivo_video)
 
     cmd = _construir_comando_mux(archivo_video, srt_ingles, srt_espanol, extension, ruta_salida)
+
+    if DEBUG:
+        print("[DEBUG] Comando multiplexación:", ' '.join(cmd))
+
     exito, stderr = _ejecutar_ffmpeg_progreso(cmd, duracion, progress_callback=progress_callback)
 
     if not exito:
