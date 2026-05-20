@@ -162,14 +162,25 @@ class VocesClarasApp:
             msg = f"Transcribiendo... ({current}/{total} segmentos)"
             if current == total:
                 self.log_message(f"📝 Total de segmentos transcritos: {total}")
+            elif current % 5 == 0 or current == 1 or current == total:
+                # Mostrar progreso cada 5 segmentos, al inicio y al final
+                self.log_message(f"🎤 Progreso transcripción: {current}/{total} segmentos ({porcentaje:.0f}%)")
         else:
             fake = min(current * 0.5, 95)
             msg = f"Transcribiendo... ({current} segmentos, total por determinar)"
             porcentaje = fake
+            # Cuando el total es desconocido, mostrar cada 5 segmentos
+            if current % 5 == 0 or current == 1:
+                self.log_message(f"🎤 Progreso transcripción: {current} segmentos procesados...")
         self.root.after(0, self.actualizar_barra_tarea, porcentaje, msg)
 
     def traduccion_progress(self, current, total):
         porcentaje = (current / total) * 100
+        # Mostrar progreso cada 5 segmentos, al inicio y al final
+        if current == total:
+            self.log_message(f"📝 Traducción completada: {current}/{total} segmentos")
+        elif current % 5 == 0 or current == 1:
+            self.log_message(f"🌎 Progreso traducción: {current}/{total} segmentos ({porcentaje:.0f}%)")
         self.root.after(0, self.actualizar_barra_tarea, porcentaje, f"Traduciendo... ({current}/{total})")
 
     def muxer_progress(self, porcentaje):
