@@ -100,3 +100,15 @@ También puedes usar el modo texto con `python main.py`.
 
 Repositorio creado por **[KingEdhard](https://github.com/KingEdhard)**  
 *"Voces claras, subtítulos perfectos"*
+
+## 🚀 Próximas mejoras
+
+- [ ] **Selector de modelo Whisper en GUI** – Elige entre velocidad (tiny/base) o precisión (large-v3)
+- [ ] **Soporte para más idiomas** – Transcripción desde inglés a español, francés, alemán, portugués
+- [ ] **Ajuste manual de sincronización** – Corrige pequeños desfases de subtítulos (± segundos)
+- [ ] **Exportar subtítulos sueltos** – Genera solo los archivos .srt sin incrustar en el video
+- [ ] **Detección automática del idioma del audio** – No asumir siempre inglés
+- [ ] **Modo oscuro en la interfaz** – Para trabajar de noche
+- [ ] **Archivo de correcciones comunitarias** – Mejora colaborativa de traducciones
+
+¿Quieres contribuir? ¡Los pull requests son bienvenidos!
