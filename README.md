@@ -1,6 +1,6 @@
 # ☁️ SubtitleStudioX – Subtitulado con IA en Google Colab
 
-**SubtitleStudioX** es la versión cloud de [SubtitleStudio](https://github.com/KingEdhard/SubtitleStudio), optimizada para ejecutarse **gratis en Google Colab con GPU T4**. Sin instalar nada en tu PC.
+**SubtitleStudioX** es la versión cloud de [SubtitleStudio](https://github.com), optimizada para ejecutarse **gratis en Google Colab con GPU T4**. Sin instalar nada en tu PC.
 
 🎬 Sube tus vídeos en inglés y obtén subtítulos en español latino con precisión milimétrica usando **WhisperX Large-v3 + alineación fonética Wav2Vec2**.
 
@@ -8,9 +8,9 @@
 
 ## 🚀 Cómo usar
 
-### 1. Abre un notebook en [Google Colab](https://colab.research.google.com/)
+### 1. Abre un notebook en [Google Colab](https://google.com)
 
-### 2. Copia y pega las celdas del archivo **[`SubtitleStudioX_Colab.ipynb`](https://github.com/KingEdhard/SubtitleStudioX/blob/main/SubtitleStudioX_Colab.ipynb)** en tu notebook
+### 2. Copia y pega las celdas del archivo **[`SubtitleStudioX_Colab.ipynb`](https://github.comX/blob/main/SubtitleStudioX_Colab.ipynb)** en tu notebook
 
 ### 3. Ejecuta la Celda 1 y espera a que termine
 
@@ -21,27 +21,25 @@ La Celda 2 incluye un bucle continuo: procesa, pregunta si quieres subir más vi
 ---
 
 ## 🔄 Flujo de procesamiento
-📹 VIDEO ORIGINAL
-↓ GPU
-🎵 Extracción de audio optimizada (VocesClaras-STT)
-↓ GPU
-🧠 WhisperX Large-v3 (Transcripción en inglés)
-↓ GPU
-🎯 Alineación fonética milimétrica (Wav2Vec2)
-↓ CPU
-📝 Generación de SRT en inglés
-↓ CPU
-🌎 Traducción a español latino (Helsinki-NLP)
-↓ CPU
-🎬 Incrustación de subtítulos (FFmpeg)
-↓
-✅ VIDEO FINAL CON SUBTÍTULOS
 
-text
+* 📹 **VIDEO ORIGINAL**
+  * ↓
+* 🎵 **Extracción de audio optimizada** (VocesClaras-STT)
+  * ↓
+* 🧠 **WhisperX Large-v3** (Transcripción en inglés)
+  * ↓
+* 🎯 **Alineación fonética milimétrica** (Wav2Vec2)
+  * ↓
+* 📝 **Generación de subtítulos SRT** en inglés
+  * ↓
+* 🌎 **Traducción a español latino** (Modelo personalizado)
+  * ↓
+* 🎬 **Incrustación de subtítulos** en el video
 
 ---
 
 ## ⚡ Ventajas
+
 
 | Característica | Detalle |
 |----------------|---------|
@@ -55,6 +53,7 @@ text
 
 ## ⚠️ Limitaciones de Colab gratuito
 
+
 | Recurso | Límite |
 |---------|--------|
 | Tiempo por sesión | ~4-6 horas |
@@ -66,7 +65,7 @@ text
 
 ## 💻 ¿Prefieres procesar en tu PC?
 
-Usa el proyecto hermano **[SubtitleStudio](https://github.com/KingEdhard/SubtitleStudio)** — 100% local, optimizado para CPU, sin límites de tiempo y con interfaz gráfica.
+Usa el proyecto hermano **[SubtitleStudio](https://github.com)** — 100% local, optimizado para CPU, sin límites de tiempo y con interfaz gráfica.
 
 ---
 
@@ -87,4 +86,4 @@ MIT License — Libre uso, modificación y distribución.
 
 *"Los subtítulos que tus series y películas favoritas merecen, ahora en la nube"*
 
-Creado por [KingEdhard](https://github.com/KingEdhard)
+Creado por [KingEdhard](https://github.com)
